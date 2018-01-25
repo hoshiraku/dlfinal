@@ -22,6 +22,10 @@ def load_data(source_dir='./data/final_project'):
 
 configs, learning_curves = load_data()
 
+# keep a copy for input and output labels
+configs_copy = configs
+learning_curves_copy = learning_curves
+
 N = len(configs)
 n_epochs = len(learning_curves[0])
 
@@ -88,7 +92,17 @@ hidden_size = 64
 output_size = 1 # 
 num_epochs = 50
 batch_size = 100
-learning_rate = 0.001
+learning_rate = 0.0001
+
+#expontial learning rate
+class Step(object):
+    def lr(lr_0, stepsize, nepochs):
+        lr_list = []
+        for i in range(nepochs):
+            lr = lr_0 * np.power(0.5, np.floor(i/stepsize))
+            lr_list.append(lr)
+        return lr_list
+    
 
 # Neural Network Model (2 hidden layers MLP)
 class MLP(nn.Module):
@@ -98,6 +112,7 @@ class MLP(nn.Module):
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, output_size)
+        #self.lr_schedule = lr_schedule
     
     def forward(self, x):
         out = self.fc1(x)
@@ -113,6 +128,17 @@ mlp = MLP(input_size, hidden_size, output_size)
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(mlp.parameters(), lr=learning_rate)
 
+def exp_lr_scheduler(optimizer, epoch, init_lr=0.0001, lr_decay_epoch=10):
+    """Decay learning rate by a factor  """
+    lr = init_lr * np.power(0.5, np.floor(epoch/lr_decay_epoch))
+    
+    print('Learning Rate: %.5f' %(lr))
+    
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+        
+    return optimizer
+    
 #Train the model
 #train_input
 #train_input = (([fea1,...,fea5],[label1]),([fea1,..,fea5],[label2]), ... ([])  );
@@ -121,11 +147,11 @@ optimizer = torch.optim.Adam(mlp.parameters(), lr=learning_rate)
 #outputs = array([1*256])  
 
 # pre-process training input and labels
-inputs = torch.from_numpy(inputs).float()
-inputs = Variable(inputs)
+inputs_torch = torch.from_numpy(inputs).float()
+inputs_variable = Variable(inputs_torch)
         
-labels = torch.from_numpy(labels).float()
-labels = Variable(labels, requires_grad = False)
+labels_torch = torch.from_numpy(labels).float()
+labels_variable = Variable(labels_torch, requires_grad = False)
 for epoch in range(num_epochs):
     
     
@@ -135,18 +161,21 @@ for epoch in range(num_epochs):
         
         # Forward + Backward + Optimize
         optimizer.zero_grad() # zero the gradient
-        outputs = mlp(inputs)
-        print (type(outputs), type(inputs), type(labels))
-        print (inputs)
+        outputs = mlp(inputs_variable)
+        #print (type(outputs), type(inputs), type(labels))
+        #print (inputs)
  #       print (outputs)
   #      print (labels)
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs, labels_variable)
         loss.backward()
         optimizer.step()
+        optimizer = exp_lr_scheduler(optimizer, epoch)
         
         print ('Epoch [%d/%d], Loss: %.4f' 
                %(epoch+1, num_epochs, loss.data[0]))
 
+#Test the model
+#Training the model using 3 folders cross validation
 
 
 
