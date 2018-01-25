@@ -27,6 +27,7 @@ configs_copy = configs
 learning_curves_copy = learning_curves
 
 N = len(configs)
+#print(N)
 n_epochs = len(learning_curves[0])
 
 configs_df = pd.DataFrame(configs)
@@ -152,6 +153,8 @@ inputs_variable = Variable(inputs_torch)
         
 labels_torch = torch.from_numpy(labels).float()
 labels_variable = Variable(labels_torch, requires_grad = False)
+
+"""
 for epoch in range(num_epochs):
     
     
@@ -173,11 +176,61 @@ for epoch in range(num_epochs):
         
         print ('Epoch [%d/%d], Loss: %.4f' 
                %(epoch+1, num_epochs, loss.data[0]))
+"""
 
-#Test the model
-#Training the model using 3 folders cross validation
+"""
+shuffle the input and output labels and use 3-folder cross validation
+"""
+def randomize(inputs, lables):
+    # Generate the permutation index array
+    permutation = np.random.permutation(inputs.shape[0])
+    shuffled_inputs = inputs[permutation]
+    shuffled_labels = lables[permutation]
+    return shuffled_inputs, shuffled_labels
 
+#shuffled_inputs, shuffled_labels = randomize(inputs, labels) 
 
+# divide into 3 folders
+N = 265
+K = np.int(N/3)
+
+# k folders
+for k in range(3):
+    
+    #shuffle
+    shuffled_inputs, shuffled_labels = randomize(inputs, labels)
+        
+    # divide training data and validation data
+    train_inputs = shuffled_inputs[:-K]
+    test_inputs = shuffled_inputs[-K:]
+        
+    train_labels = shuffled_labels[:-K]
+    test_labels = shuffled_labels[-K:]
+    
+    for epoch in range(num_epochs):
+        optimizer.zero_grad()
+        
+        #torch to variable
+        train_inputs_variable = Variable(torch.from_numpy(train_inputs).float())
+        train_labels_variable = Variable(torch.from_numpy(train_labels).float())
+        
+        test_inputs_variable = Variable(torch.from_numpy(test_inputs).float())
+        test_labels_variable = Variable(torch.from_numpy(test_labels).float())
+        
+        # train model
+        ouputs = mlp(train_inputs_variable)
+        loss = criterion(ouputs, train_labels_variable)
+        loss.backward()
+        optimizer.step()
+        optimizer = exp_lr_scheduler(optimizer,epoch)
+        
+        print ('Epoch [%d/%d], Traing Loss: %.4f' 
+               %(epoch+1, num_epochs, loss.data[0]))
+    
+    # test model
+    outputs = mlp(test_inputs_variable)
+    test_loss = criterion(outputs, test_labels_variable)
+    print (test_loss.data[0])
 
 
 
