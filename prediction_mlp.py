@@ -6,7 +6,7 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from sklearn.model_selection import KFold
 
 def load_data(source_dir='./data/final_project'):
     
@@ -85,13 +85,13 @@ import torch.nn as nn
 import torchvision
 import numpy as np
 from torch.autograd import Variable
-
+from sklearn import preprocessing
 # Hyperparameters
 
 input_size = 5 # 5 features
 hidden_size = 64
 output_size = 1 # 
-num_epochs = 50
+num_epochs = 2000
 batch_size = 100
 learning_rate = 0.0001
 
@@ -100,40 +100,45 @@ class Step(object):
     def lr(lr_0, stepsize, nepochs):
         lr_list = []
         for i in range(nepochs):
-            lr = lr_0 * np.power(0.5, np.floor(i/stepsize))
+            lr = lr_0 * np.power(0.95, np.floor(i/stepsize))
             lr_list.append(lr)
         return lr_list
     
 
 # Neural Network Model (2 hidden layers MLP)
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, drop_rate):
         super(MLP, self).__init__()
         self.relu = nn.ReLU()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, output_size)
+        #dropout layer
+        self.drop_rate = drop_rate
+        self.drop = nn.Dropout(p=drop_rate)
         #self.lr_schedule = lr_schedule
     
     def forward(self, x):
-        out = self.fc1(x)
+        out = self.drop(x)
+        out = self.fc1(out)
         out = self.relu(out)
-        out = self.fc2(out)
+        out = self.drop(out)
+        out = self.fc2(out)        
         out = self.relu(out)
+        out = self.drop(out)
         out = self.fc3(out)
         return out
 
-mlp = MLP(input_size, hidden_size, output_size)
 
-# Loss and Optimer
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(mlp.parameters(), lr=learning_rate)
 
-def exp_lr_scheduler(optimizer, epoch, init_lr=0.0001, lr_decay_epoch=10):
-    """Decay learning rate by a factor  """
-    lr = init_lr * np.power(0.5, np.floor(epoch/lr_decay_epoch))
-    
-    print('Learning Rate: %.5f' %(lr))
+
+
+def exp_lr_scheduler(optimizer, epoch, init_lr=0.0001, lr_decay_epoch=100):
+    """Decay learning rate by a factor  http://pytorch.org/docs/master/optim.html#how-to-adjust-learning-rate"""
+    lr = init_lr * np.power(0.95, np.floor(epoch/lr_decay_epoch))
+    #lr = init_lr
+ #   print('Learning Rate: %.5f' %(lr))
+    #print(np.power(0.5, np.floor(epoch/lr_decay_epoch))*init_lr)
     
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
@@ -193,19 +198,25 @@ def randomize(inputs, lables):
 # divide into 3 folders
 N = 265
 K = np.int(N/3)
+kf = KFold(n_splits= 3)
 
-# k folders
-for k in range(3):
-    
-    #shuffle
-    shuffled_inputs, shuffled_labels = randomize(inputs, labels)
-        
-    # divide training data and validation data
-    train_inputs = shuffled_inputs[:-K]
-    test_inputs = shuffled_inputs[-K:]
-        
-    train_labels = shuffled_labels[:-K]
-    test_labels = shuffled_labels[-K:]
+total_loss = np.array([0.,0.])# altogether 2 different settings for hyperparameter
+print (total_loss)
+
+# The first hyparameter setting
+for train, test in kf.split(labels): 
+    # New training data and test data after cross validation split
+    train_inputs, test_inputs, train_labels, test_labels = inputs[train], inputs[test], labels[train], labels[test]     
+
+    # Feature prerpocessing
+    scaler = preprocessing.StandardScaler().fit(train_inputs)
+    scaler.transform(train_inputs)
+    scaler.transform(test_inputs)
+    learning_rate = 0.001
+    # Loss and Optimer
+    mlp = MLP(input_size, hidden_size, output_size, drop_rate = 0.2)
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(mlp.parameters(), lr=learning_rate, weight_decay=0.01)
     
     for epoch in range(num_epochs):
         optimizer.zero_grad()
@@ -218,20 +229,70 @@ for k in range(3):
         test_labels_variable = Variable(torch.from_numpy(test_labels).float())
         
         # train model
+        mlp.train()
         ouputs = mlp(train_inputs_variable)
         loss = criterion(ouputs, train_labels_variable)
         loss.backward()
         optimizer.step()
         optimizer = exp_lr_scheduler(optimizer,epoch)
         
-        print ('Epoch [%d/%d], Traing Loss: %.4f' 
-               %(epoch+1, num_epochs, loss.data[0]))
+        if epoch%100 == 0:
+            print ('Epoch [%d/%d], Traing Loss: %.4f' 
+                   %(epoch+1, num_epochs, loss.data[0]))
     
     # test model
+    mlp.eval() # for the case of dropout-layer and Batch-normalization
     outputs = mlp(test_inputs_variable)
     test_loss = criterion(outputs, test_labels_variable)
     print (test_loss.data[0])
+    total_loss[0] += test_loss.data[0]
+    print (total_loss)
 
+    
 
+# The 2nd hyparameter setting
+for train, test in kf.split(labels): 
+    # New training data and test data after cross validation split
+    train_inputs, test_inputs, train_labels, test_labels = inputs[train], inputs[test], labels[train], labels[test]     
 
+    # Feature prerpocessing
+    scaler = preprocessing.StandardScaler().fit(train_inputs)
+    scaler.transform(train_inputs)
+    scaler.transform(test_inputs)
+    
+    learning_rate = 0.001
+    # Loss and Optimer
+    mlp = MLP(input_size, hidden_size, output_size, drop_rate = 0.2)
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(mlp.parameters(), lr=learning_rate, weight_decay=0.1)
+    
+    for epoch in range(num_epochs):
+        optimizer.zero_grad()
+        
+        #torch to variable
+        train_inputs_variable = Variable(torch.from_numpy(train_inputs).float())
+        train_labels_variable = Variable(torch.from_numpy(train_labels).float())
+        
+        test_inputs_variable = Variable(torch.from_numpy(test_inputs).float())
+        test_labels_variable = Variable(torch.from_numpy(test_labels).float())
+        
+        # train model
+        mlp.train()
+        ouputs = mlp(train_inputs_variable)
+        loss = criterion(ouputs, train_labels_variable)
+        loss.backward()
+        optimizer.step()
+        optimizer = exp_lr_scheduler(optimizer,epoch)
+        
+        if epoch%100 == 0:
+            print ('Epoch [%d/%d], Traing Loss: %.4f' 
+                   %(epoch+1, num_epochs, loss.data[0]))
+    
+    # test model
+    mlp.eval()
+    outputs = mlp(test_inputs_variable)
+    test_loss = criterion(outputs, test_labels_variable)
+    print (test_loss.data[0])
+    total_loss[1] += test_loss.data[0]
+    print (total_loss)
 
