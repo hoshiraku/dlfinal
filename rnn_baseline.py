@@ -25,7 +25,7 @@ from sklearn.metrics import mean_squared_error
 
 import matplotlib.pyplot as plt
 
-N_epochs = 5 # change different N epochs: 5, 10, 20, random
+N_epochs = 10 # change different N epochs: 5, 10, 20, random
 
 if __name__ == '__main__':
     # many baselines
