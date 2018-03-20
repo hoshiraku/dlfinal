@@ -13,9 +13,9 @@ HIDDEN_SIZE = 64
 OUTPUT_SIZE = 1
 DROP_RATE = 0.2
 #BATCH_SIZE = 32
-LERANING_RATE = 0.01
+LERANING_RATE = 0.005
 NUM_EPOCHS = 40
-CONFIG_ID = 4
+CONFIG_ID = 6
 
 
 class RNN(nn.Module):
@@ -48,8 +48,9 @@ class RNN(nn.Module):
 
 if __name__ == "__main__":
 
+    # add random epochs here
     N_EPOCHS = np.random.randint(5, 20)
-    #N_EPOCHS = 20
+    N_EPOCHS = 10
     INPUT_SIZE = N_EPOCHS + 5
     #INPUT_SIZE = 10
     print('N_EPOCHS is', N_EPOCHS)

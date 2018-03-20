@@ -1,4 +1,3 @@
-import os
 import torch
 import torch.nn as nn
 import numpy as np
@@ -17,11 +16,11 @@ input_size = 5
 hidden_size = 64
 output_size = 1
 dr_score = 0.2
-learning_rate = 0.01
+learning_rate = 0.001
 num_epochs = 40
 lr_exponential = 1.0
 
-CONFIG_ID = 1
+CONFIG_ID = 10
 
 
 # Neural Network Model (2 hidden layers MLP)
