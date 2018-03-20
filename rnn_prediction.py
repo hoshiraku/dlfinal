@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import time
 from torch.autograd import Variable
 from sklearn.model_selection import KFold
 from data import load_data_raw
@@ -13,9 +14,10 @@ import matplotlib.pyplot as plt
 HIDDEN_SIZE = 64
 OUTPUT_SIZE = 1
 DROP_RATE = 0.5
-BATCH_SIZE = 32
+#BATCH_SIZE = 32
 LERANING_RATE = 0.001
 NUM_EPOCHS = 40
+#add random search here
 
 
 class RNN(nn.Module):
@@ -30,7 +32,6 @@ class RNN(nn.Module):
         self.drop = nn.Dropout(p=DROP_RATE)
 
     def forward(self, x):
-
         out = self.fc1(x)
         out = self.relu(out)
         out = self.drop(out)
@@ -50,20 +51,20 @@ class RNN(nn.Module):
 if __name__ == "__main__":
 
     #N_EPOCHS = np.random.randint(5, 20)
-    N_EPOCHS = 5
+    N_EPOCHS = 20
     INPUT_SIZE = N_EPOCHS + 5
+    #INPUT_SIZE = 10
     print('N_EPOCHS is', N_EPOCHS)
-
+    
     inputs, labels = load_data_learning_curve(n_epochs=N_EPOCHS)
-
-
+    
     # training input and labels for Varible
     inputs_torch = torch.from_numpy(inputs).float()
     inputs_variable = Variable(inputs_torch)
 
     labels_torch = torch.from_numpy(labels).float()
     labels_variable = Variable(labels_torch, requires_grad=False)
-
+    
 
 
     # shuffled_inputs, shuffled_labels = randomize(inputs, labels)
@@ -78,6 +79,7 @@ if __name__ == "__main__":
     subset_nums = []
     RNN_learning_avg_curve = [0.0] * NUM_EPOCHS
     
+    start_time = time.time()
     
     for train, val in kf.split(labels):
         # Subsets of training data and validation data after cross validation split
@@ -86,6 +88,8 @@ if __name__ == "__main__":
 
         #train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
 
+        
+        
         # Loss and Optimer
         rnn = RNN(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, n_epochs=N_EPOCHS)
         criterion = nn.MSELoss()
@@ -131,10 +135,11 @@ if __name__ == "__main__":
         #print(validation_loss.data[0])
         #total_loss += validation_loss.data[0]
         #print(total_loss)
-        print("This is the end of rnn one cv subset  ")
-        
         RNN_learning_curves.append(RNN_learning_curve)
-
+        print("This is the end of rnn one cv subset  ")        
+        
+    end_time = time.time() - start_time
+    print(end_time)
 
     for i in range(len(RNN_learning_curves)):
         for j in range(len(RNN_learning_curves[i])):
