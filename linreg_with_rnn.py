@@ -29,11 +29,11 @@ if __name__ == '__main__':
         mse = mean_squared_error(y_val, y_pred)
         mse_avg += mse * len(y_val) / len(labels)
         
-        print("3-fold cross validation score: %.3f" % score)
+        print("3-fold cross validation score: % f" % score)
         print("3-fold cross validation mse: % f" % mse)
         
     
-    print("average cross validation score: %.3f" % score_avg)
+    print("average cross validation score: % f" % score_avg)
     print("average cross validation mse: % f" % mse_avg)
         
         
