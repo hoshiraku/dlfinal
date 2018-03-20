@@ -49,7 +49,7 @@ if __name__ == '__main__':
         y_pred = reg_ranfor.predict(X_val)
         #print(y_pred)
         error_ranfor = mean_squared_error(y_val, y_pred)
-        avg_error_ranfor += error_ranfor * len(y_val) / len(labels_raw) * len(y_val)
+        avg_error_ranfor += error_ranfor * len(y_val) / len(labels_raw)
         print("one cross validation MSE: %.3f" % error_ranfor)
     
     print("3-fold cross validation average loss: %.3f\n" %avg_error_ranfor)
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         reg_detr.fit(X_train, y_train)
         y_pred = reg_detr.predict(X_val)
         error_detr = mean_squared_error(y_val, y_pred)
-        avg_error_detr += error_detr * len(y_val) / len(labels_raw) * len(y_val)
+        avg_error_detr += error_detr * len(y_val) / len(labels_raw)
         print("one cross validation MSE: %.3f" % error_detr)
     
     print("3-fold cross validation average loss: %.3f" %avg_error_detr)
@@ -81,7 +81,7 @@ if __name__ == '__main__':
         reg_lin.fit(X_train, y_train)
         y_pred = reg_lin.predict(X_val)
         error_lin = mean_squared_error(y_val, y_pred)
-        avg_error_lin += error_lin * len(y_val) / len(labels_raw) * len(y_val)
+        avg_error_lin += error_lin * len(y_val) / len(labels_raw)
         print("one cross validation MSE: %.3f" % error_lin)
     
     print("3-fold cross validation average loss: %.3f" %avg_error_lin)

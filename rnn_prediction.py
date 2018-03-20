@@ -2,22 +2,20 @@ import torch
 import torch.nn as nn
 import numpy as np
 import time
+import json
 from torch.autograd import Variable
 from sklearn.model_selection import KFold
-from data import load_data_raw
-from data import load_data_standardization
 from data import load_data_learning_curve
 from torch.optim.lr_scheduler import ExponentialLR
-
 import matplotlib.pyplot as plt
 
 HIDDEN_SIZE = 64
 OUTPUT_SIZE = 1
-DROP_RATE = 0.5
+DROP_RATE = 0.2
 #BATCH_SIZE = 32
-LERANING_RATE = 0.001
+LERANING_RATE = 0.01
 NUM_EPOCHS = 40
-#add random search here
+CONFIG_ID = 4
 
 
 class RNN(nn.Module):
@@ -50,8 +48,8 @@ class RNN(nn.Module):
 
 if __name__ == "__main__":
 
-    #N_EPOCHS = np.random.randint(5, 20)
-    N_EPOCHS = 20
+    N_EPOCHS = np.random.randint(5, 20)
+    #N_EPOCHS = 20
     INPUT_SIZE = N_EPOCHS + 5
     #INPUT_SIZE = 10
     print('N_EPOCHS is', N_EPOCHS)
@@ -79,6 +77,7 @@ if __name__ == "__main__":
     subset_nums = []
     RNN_learning_avg_curve = [0.0] * NUM_EPOCHS
     
+    # calculate RNN runtime
     start_time = time.time()
     
     for train, val in kf.split(labels):
@@ -119,9 +118,11 @@ if __name__ == "__main__":
             optimizer.step()
             scheduler.step()
             
+            """
             if epoch % 100 == 0:
                 print('Epoch [%d/%d], Validation Loss: %.4f'
                       % (epoch + 1, NUM_EPOCHS, loss.data[0]))
+            """
             
             RNN_learning_curve.append(loss.data[0])
         # validate model
@@ -139,14 +140,14 @@ if __name__ == "__main__":
         print("This is the end of rnn one cv subset  ")        
         
     end_time = time.time() - start_time
-    print(end_time)
+    print('Runtime of RNN: %.4fs ' % end_time)
 
     for i in range(len(RNN_learning_curves)):
         for j in range(len(RNN_learning_curves[i])):
             #print(i , j)
             RNN_learning_avg_curve[j] += RNN_learning_curves[i][j] * subset_nums[i] / len(labels)    
     
-    
+    print("Final Error after 40 epochs: %.4f " % RNN_learning_avg_curve[-1])
     #plot the learning curve
     t_idx = np.arange(1, NUM_EPOCHS+1)
     
@@ -174,4 +175,29 @@ if __name__ == "__main__":
     plt.xlabel("y(x, t=40)")
     plt.ylabel("CDF(y)")
     plt.show()
+    
+    # store traing results of RNN
+    json_string_rnn = '{"final_performance": ' + str(RNN_learning_avg_curve[-1]) +', '
+    json_string_rnn += '"rumtime": ' +str(end_time) + ', '
+    json_string_rnn += '"config": {' 
+    json_string_rnn += '"drop_rate": ' + str(DROP_RATE) + ', '
+    json_string_rnn += '"learning_rate": ' + str(LERANING_RATE) + ', '
+    json_string_rnn += '"num_epochs": ' + str(NUM_EPOCHS) + ', '
+    json_string_rnn += '"first N epochs": ' + str(N_EPOCHS)
+    json_string_rnn += '}, '
+    json_string_rnn += '"config_id": ' + str(CONFIG_ID) + ', '
+    json_string_rnn += '"learning_curve": ' + str(RNN_learning_avg_curve)
+    json_string_rnn += '}'
+    
+    
+    #print(json_string)
+    parsed_json_rnn = json.loads(json_string_rnn)
+    
+    #print(parsed_json['config'])
+    #configs_json = parsed_json['config']
+    #print(configs_json['drop_rate'])
+    
+    
+    with open('./data/results/rnn/config_rnn_'+str(CONFIG_ID)+'.json', 'w') as outfile:
+        json.dump(parsed_json_rnn, outfile)
         
